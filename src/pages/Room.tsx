@@ -2,10 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Container } from '@mui/material'
+import ReactPlayer from 'react-player'
 
 import SimplePlayer from '../compoments/SimplePlayer'
 import exampleVideo from '../assets/肥肠抱歉.mp4'
 import { WHEPClient } from '../libs/whep'
+
+declare global {
+  interface Window {
+    pc?: RTCPeerConnection
+  }
+}
 
 const whepBaseURL = 'http://100.64.0.6:8081'
 
@@ -19,9 +26,13 @@ function whepUrl(roomId: string) {
 
 export default function Room() {
   const params = useParams()
+  const { roomId } = params
 
-  const [room, setRoom] = useState('')
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const [room, setRoom] = useState(roomId ?? null)
+  const videoRef = useRef<ReactPlayer>(null)
+
+  const [videoStream, setVideoStream] = useState<MediaStream>()
+  const [playing, setPlaying] = useState<boolean>()
 
   useEffect(() => {
     const { roomId } = params
@@ -39,7 +50,9 @@ export default function Room() {
     console.log('init webrtc')
 
     //Create peerconnection
-    const pc = new RTCPeerConnection()
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    })
     window.pc = pc
 
     //Add recv only transceivers
@@ -48,10 +61,10 @@ export default function Room() {
 
     pc.ontrack = (event) => {
       console.log(event)
-      if (event.track.kind == 'video' && videoRef.current) {
-        const video = videoRef.current
-        video.srcObject = event.streams[0]
-        video.controls = true
+      if (event.track.kind == 'video') {
+        setVideoStream(event.streams[0])
+        // video.srcObject = event.streams[0]
+        // video.controls = true
       }
     }
     //Create whep client
@@ -61,17 +74,24 @@ export default function Room() {
     //const token = ""
 
     //Start viewing
-    whep
-      .view(pc, url, '')
-      .then(() => {
-        videoRef.current?.play()
-      })
-      .catch((err) => console.log(err))
+    whep.view(pc, url, '').catch((err) => console.log(err))
 
     return () => {
-      whep.stop().catch((err) => console.log(err))
+      whep
+        .stop()
+        .catch((err) => console.log(err))
+        .finally(() => {
+          pc.close()
+          window.pc = undefined
+        })
     }
   }, [room])
+
+  useEffect(() => {
+    if (videoStream && playing === undefined) {
+      setPlaying(true)
+    }
+  }, [videoStream, playing])
 
   // useEffect(() => {
   //   const timer = setInterval(() => {
@@ -90,7 +110,7 @@ export default function Room() {
         sx={{
           alignContent: 'center',
           justifyContent: 'center',
-          paddingTop: '20px'
+          marginTop: '20px'
         }}
       >
         {/* <SimplePlayer
@@ -103,24 +123,18 @@ export default function Room() {
           videoRef={videoRef}
         /> */}
 
-        {room ? (
-          <video
-            id="stream-video"
-            style={{ width: '100%', aspectRatio: '16/9' }}
-            ref={videoRef}
-            controls
-            muted
-          />
-        ) : (
-          <video
-            id="unknown-video"
-            style={{ width: '100%', aspectRatio: '16/9' }}
-            src={exampleVideo}
-            ref={videoRef}
-            controls
-            muted
-          />
-        )}
+        <ReactPlayer
+          style={{ aspectRatio: '16 / 9', margin: '0' }}
+          width="100%"
+          height="100%"
+          ref={videoRef}
+          muted
+          controls
+          playing={playing}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          url={videoStream || exampleVideo}
+        />
       </Container>
     </>
   )

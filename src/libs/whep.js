@@ -94,7 +94,8 @@ export class WHEPClient extends EventTarget
 		// 	throw new Error("Response missing location header")
 
 		//Get the resource url
-		this.resourceURL = new URL(url);
+		this.resourceURL = new URL(fetched.headers.get("location"), url);
+		// this.resourceURL = new URL(url);
 
 		//Get the links
 		const links = {};
