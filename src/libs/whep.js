@@ -21,7 +21,7 @@ export class WHEPClient extends EventTarget
 		this.endOfcandidates = false;
 	}
 
-	async view(pc, url, token)
+	async view(pc, url, token, signal)
 	{
 		//If already publishing
 		if (this.pc)
@@ -85,13 +85,16 @@ export class WHEPClient extends EventTarget
 		const fetched = await fetch(url, {
 			method  : "POST",
 			body    : offer.sdp,
-			headers
+			headers,
+			signal,
 		});
 
 		if (!fetched.ok)
 			throw new Error("Request rejected with status " + fetched.status)
-		// if (!fetched.headers.get("location"))
-		// 	throw new Error("Response missing location header")
+		if (!fetched.headers.get("location")) {
+			console.log(fetched.headers);
+			throw new Error("Response missing location header")
+		}
 
 		//Get the resource url
 		this.resourceURL = new URL(fetched.headers.get("location"), url);
@@ -178,7 +181,8 @@ export class WHEPClient extends EventTarget
 			fetch(this.eventsUrl, {
 				method  : "POST",
 				body    : JSON.stringify(events),
-				headers
+				headers,
+				signal,
 			}).then((fetched) => {
 				//If the event channel could be created
 				if (!fetched.ok)
@@ -444,7 +448,7 @@ export class WHEPClient extends EventTarget
 		const fetched = await fetch(this.resourceURL, {
 			method  : "POST",
 			body    : JSON.stringify(muted),
-			headers
+			headers,
 		});
 	}
 

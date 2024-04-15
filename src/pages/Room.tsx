@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Container } from '@mui/material'
-import ReactPlayer from 'react-player'
+import ReactPlayer from 'react-player/file'
 
-import SimplePlayer from '../compoments/SimplePlayer'
+// import SimplePlayer from '../compoments/SimplePlayer'
 import exampleVideo from '../assets/肥肠抱歉.mp4'
 import { WHEPClient } from '../libs/whep'
+import '../css/player.scss'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 declare global {
   interface Window {
@@ -14,7 +16,35 @@ declare global {
   }
 }
 
-const whepBaseURL = 'http://100.64.0.6:8081'
+// const whepBaseURL = 'http://100.64.0.6:8081'
+const whepBaseURL = import.meta.env.VITE_STREAMSERVER
+console.log('stream server: ', whepBaseURL)
+
+async function retry<T>(
+  fn: () => Promise<T>,
+  times: number,
+  delay = 0
+): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (times > 0) {
+      console.log(
+        'get an error',
+        err,
+        'retrying in',
+        delay,
+        'ms',
+        'times left',
+        times
+      )
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      return await retry(fn, times - 1, delay * 2)
+    } else {
+      throw err
+    }
+  }
+}
 
 function whepUrl(roomId: string) {
   const url = new URL(`${whepBaseURL}/whep`)
@@ -34,6 +64,8 @@ export default function Room() {
   const [videoStream, setVideoStream] = useState<MediaStream>()
   const [playing, setPlaying] = useState<boolean>()
 
+  const [browserFullScreen, setBrowserFullScreen] = useState<boolean>(false)
+
   useEffect(() => {
     const { roomId } = params
     setRoom(roomId ?? '')
@@ -43,6 +75,25 @@ export default function Room() {
     console.log('room:', room)
   }, [room])
 
+  // browser full screen callbacks
+  useHotkeys(
+    'enter',
+    () => {
+      console.log('full screen')
+      setBrowserFullScreen(true)
+    },
+    []
+  )
+
+  useHotkeys(
+    'esc',
+    () => {
+      console.log('exit full screen')
+      setBrowserFullScreen(false)
+    },
+    []
+  )
+
   // setup whep client
   useEffect(() => {
     if (!room) return
@@ -51,7 +102,15 @@ export default function Room() {
 
     //Create peerconnection
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        {
+          urls: [
+            'stun:stun.l.google.com:19302',
+            // 'stun:stun.qq.com:3478',
+            'stun:stun.syncthing.net:3478'
+          ]
+        }
+      ]
     })
     window.pc = pc
 
@@ -67,16 +126,19 @@ export default function Room() {
         // video.controls = true
       }
     }
+
     //Create whep client
     const whep = new WHEPClient()
+    const abortCtrlor = new AbortController()
 
     const url = whepUrl(room)
     //const token = ""
 
     //Start viewing
-    whep.view(pc, url, '').catch((err) => console.log(err))
+    whep.view(pc, url, '', abortCtrlor.signal).catch((err) => console.log(err))
 
     return () => {
+      abortCtrlor.abort()
       whep
         .stop()
         .catch((err) => console.log(err))
@@ -124,7 +186,12 @@ export default function Room() {
         /> */}
 
         <ReactPlayer
-          style={{ aspectRatio: '16 / 9', margin: '0' }}
+          // style={{ aspectRatio: '16 / 9', margin: '0', maxHeight: '95vh'}}
+          className={
+            browserFullScreen
+              ? 'player-container-fullscreen'
+              : 'player-container-normal'
+          }
           width="100%"
           height="100%"
           ref={videoRef}
@@ -134,6 +201,7 @@ export default function Room() {
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           url={videoStream || exampleVideo}
+          preload="none"
         />
       </Container>
     </>
