@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-
 import { Container } from '@mui/material'
 import ReactPlayer from 'react-player/file'
-
 // import SimplePlayer from '../compoments/SimplePlayer'
+import { useHotkeys } from 'react-hotkeys-hook'
+
 import exampleVideo from '../assets/肥肠抱歉.mp4'
 import { WHEPClient } from '../libs/whep'
-import '../css/player.scss'
-import { useHotkeys } from 'react-hotkeys-hook'
+import css from '../css/player.module.scss'
 
 declare global {
   interface Window {
@@ -77,7 +76,7 @@ export default function Room() {
 
   // browser full screen callbacks
   useHotkeys(
-    'enter',
+    'ctrl+enter',
     () => {
       console.log('full screen')
       setBrowserFullScreen(true)
@@ -185,24 +184,26 @@ export default function Room() {
           videoRef={videoRef}
         /> */}
 
-        <ReactPlayer
-          // style={{ aspectRatio: '16 / 9', margin: '0', maxHeight: '95vh'}}
+        <Container
           className={
             browserFullScreen
-              ? 'player-container-fullscreen'
-              : 'player-container-normal'
-          }
-          width="100%"
-          height="100%"
-          ref={videoRef}
-          muted
-          controls
-          playing={playing}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          url={videoStream || exampleVideo}
-          preload="none"
-        />
+              ? css.playerContainerFullscreen
+              : css.playerContainerNormal
+          }>
+          <ReactPlayer
+            width="100%"
+            height="100%"
+            ref={videoRef}
+            muted
+            controls
+            playing={playing}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            url={videoStream || exampleVideo}
+            preload="none"
+          />
+        </Container>
+
       </Container>
     </>
   )
