@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Container } from '@mui/material'
 import ReactPlayer from 'react-player/file'
-// import SimplePlayer from '../compoments/SimplePlayer'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { useAtom } from 'jotai'
 
 import exampleVideo from '../assets/肥肠抱歉.mp4'
 import { WHEPClient } from '../libs/whep'
 import css from '../css/player.module.scss'
+import { playerVolumeAtom } from '../storages/player'
 
 declare global {
   interface Window {
@@ -64,6 +65,8 @@ export default function Room() {
   const [playing, setPlaying] = useState<boolean>()
 
   const [browserFullScreen, setBrowserFullScreen] = useState<boolean>(false)
+
+  const [playerVolume, setPlayerVolume] = useAtom(playerVolumeAtom)
 
   useEffect(() => {
     const { roomId } = params
@@ -172,17 +175,7 @@ export default function Room() {
           alignContent: 'center',
           justifyContent: 'center',
           marginTop: '20px'
-        }}
-      >
-        {/* <SimplePlayer
-          options={{
-            // url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-            url: exampleVideo,
-            isLive: true,
-            autoplay: false
-          }}
-          videoRef={videoRef}
-        /> */}
+        }}>
 
         <Container
           className={
@@ -194,13 +187,21 @@ export default function Room() {
             width="100%"
             height="100%"
             ref={videoRef}
-            muted
+            muted={!videoStream || playerVolume <= 0}
             controls
             playing={playing}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             url={videoStream || exampleVideo}
             preload="none"
+            volume={playerVolume}
+            config={{
+              attributes: {
+                onVolumeChange: (e) => {
+                  setPlayerVolume(e.target.volume)
+                }
+              }
+            }}
           />
         </Container>
 
