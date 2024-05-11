@@ -197,8 +197,9 @@ export default function Room() {
             volume={playerVolume}
             config={{
               attributes: {
-                onVolumeChange: (e) => {
-                  setPlayerVolume(e.target.volume)
+                onVolumeChange: (e: Event) => {
+                  const target = e.target as HTMLVideoElement
+                  setPlayerVolume(target.volume)
                 }
               }
             }}
