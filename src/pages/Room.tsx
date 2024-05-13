@@ -13,6 +13,7 @@ import { playerVolumeAtom } from '../storages/player'
 declare global {
   interface Window {
     pc?: RTCPeerConnection
+    whepClient?: WHEPClient
   }
 }
 
@@ -107,11 +108,20 @@ export default function Room() {
       iceServers: [
         {
           urls: [
-            'stun:stun.l.google.com:19302',
-            // 'stun:stun.qq.com:3478',
-            'stun:stun.syncthing.net:3478'
-          ]
+            'stun:10.15.0.65:3478',
+            'turn:10.15.0.65:3478?transport=udp',
+            'turn:10.15.0.65:3478?transport=tcp'
+          ],
+          username: 'public',
+          credential: '123456'
         }
+        // {
+        //   urls: [
+        //     'stun:stun.l.google.com:19302',
+        //     // 'stun:stun.qq.com:3478',
+        //     'stun:stun.syncthing.net:3478'
+        //   ]
+        // }
       ]
     })
     window.pc = pc
@@ -131,6 +141,8 @@ export default function Room() {
 
     //Create whep client
     const whep = new WHEPClient()
+
+    window.whepClient = whep
     const abortCtrlor = new AbortController()
 
     const url = whepUrl(room)
@@ -175,14 +187,15 @@ export default function Room() {
           alignContent: 'center',
           justifyContent: 'center',
           marginTop: '20px'
-        }}>
-
-        <Container
+        }}
+      >
+        <div
           className={
             browserFullScreen
               ? css.playerContainerFullscreen
               : css.playerContainerNormal
-          }>
+          }
+        >
           <ReactPlayer
             width="100%"
             height="100%"
@@ -197,6 +210,7 @@ export default function Room() {
             volume={playerVolume}
             config={{
               attributes: {
+                preload: 'none',
                 onVolumeChange: (e: Event) => {
                   const target = e.target as HTMLVideoElement
                   setPlayerVolume(target.volume)
@@ -204,8 +218,7 @@ export default function Room() {
               }
             }}
           />
-        </Container>
-
+        </div>
       </Container>
     </>
   )
